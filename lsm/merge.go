@@ -14,6 +14,11 @@ const (
 	defaultC0MergeMinThreshold     int64 = 2 * 1024 * 1024
 	defaultC0MergeMaxThreshold     int64 = 8 * 1024 * 1024
 	defaultMergeDirsFlushThreshold       = 4000
+
+	defaultMaxSizeAmplificationRatio = 0.25
+	defaultSizeRatio = 0.1
+	defaultMinMergeWidth = 2
+	defaultMaxMergeWidth = 5
 )
 
 // Variables which can be configured to tune how lsm merge work
@@ -22,6 +27,10 @@ var (
 	C0MergeMinThreshold     = defaultC0MergeMinThreshold
 	C0MergeMaxThreshold     = defaultC0MergeMaxThreshold
 	MergeDirsFlushThreshold = defaultMergeDirsFlushThreshold
+	MaxSizeAmplificationRatio = defaultMaxSizeAmplificationRatio
+    SizeRatio = defaultSizeRatio
+    MinMergeWidth = defaultMinMergeWidth
+    MaxMergeWidth = defaultMaxMergeWidth
 )
 
 type mergeState struct {
@@ -61,6 +70,98 @@ func (ctree *ctree) mergeSizeThreshold() int64 {
 
 func (ctree *ctree) mergeRequired() bool {
 	return atomic.LoadInt64(&ctree.Stats.LeafsSize) > ctree.mergeSizeThreshold()
+}
+
+// checkSizeAmplification checks if full merge due to expected size amplification is needed
+func (lsm* Lsm) checkSizeAmplification() bool {
+	lsm.cfg.Log.Infoln("check size amp:")
+	lsm.logSizes()
+	if len(lsm.Ctree) <= memLsmCtrees {
+		return false
+	}
+	var sum int64 = 0
+	for i := memLsmCtrees; i < len(lsm.Ctree) - 1; i++ {
+		sum += lsm.Ctree[i].Stats.LeafsSize
+	}
+	if sum == 0 {
+		lsm.cfg.Log.Infoln("Zero sum")
+		return false
+	}
+	if lsm.Ctree[len(lsm.Ctree) - 1].Stats.LeafsSize == 0 {
+		lsm.cfg.Log.Infoln("Zero last")
+		return true
+	}
+	ratio := float64(sum) / float64(lsm.Ctree[len(lsm.Ctree) - 1].Stats.LeafsSize)
+	if ratio > MaxSizeAmplificationRatio {
+		lsm.cfg.Log.Infoln("Amp ratio: ", ratio)
+		return true
+	}
+	lsm.cfg.Log.Infoln("Amp no results")
+	return false
+}
+
+// checkSizeAmplification checks if full merge due to too big size ratio is needed
+func (lsm* Lsm) checkSizeRatio(idx int) (bool, int, int) {
+	var bound = idx + 1
+	var sum = lsm.Ctree[idx].Stats.LeafsSize
+	nonEmptyTrees := 0
+	if sum != 0 {
+		nonEmptyTrees = 1
+	}
+
+	for (nonEmptyTrees != MaxMergeWidth) && (bound < len(lsm.Ctree)) {
+		currentSize := lsm.Ctree[bound].Stats.LeafsSize
+		if (sum == 0) || (float64(currentSize) / float64(sum) <= (100 + SizeRatio) / 100.0) {
+			sum += currentSize
+			bound++
+			if currentSize != 0 {
+				nonEmptyTrees++
+			}
+		} else {
+			break
+		}
+	}
+
+	bound--
+
+	var mergeRequired = (bound != idx) && (nonEmptyTrees >= MinMergeWidth)
+	var next = bound + 1
+
+	if next == len(lsm.Ctree) {
+		next = 0
+	}
+
+	return mergeRequired, bound, next
+}
+
+// mergeParams returns (false, _, next) if ctree on idx should not be merged and (true, bound, next) otherwise,
+// where next is the next tree which should be checked and bound is the last tree which should be merged
+func (lsm* Lsm) mergeParams(idx int) (bool, int, int) {
+	var mergeRequired bool
+	var next int
+	lsm.cfg.Log.Infoln("checking merge strt idx: ", idx)
+	if idx < memLsmCtrees {
+		ctree := lsm.Ctree[idx]
+		mergeRequired = ctree.Stats.LeafsSize > ctree.mergeSizeThreshold()
+		next = idx + 1
+		if next == len(lsm.Ctree) - 1 {
+			next = 0
+		}
+		return mergeRequired, idx + 1, next
+	} else {
+		mergeRequired = false
+		var bound int
+		if idx == memLsmCtrees {
+			mergeRequired = lsm.checkSizeAmplification()
+			if mergeRequired {
+				return true, len(lsm.Ctree) - 1, 0
+			}
+		}
+		if !mergeRequired {
+			mergeRequired, bound, next = lsm.checkSizeRatio(idx)
+		}
+		return mergeRequired, bound, next
+	}
 }
 
 func (lsm *Lsm) mergeSaveEntries(state *mergeState) (err error) {
@@ -193,6 +294,20 @@ func adjustFromTo(from, to int) (int, int) {
 	return from, to
 }
 
+func (lsm *Lsm) pushToUp(to int) int {
+	if lsm.Ctree[to].merging {
+		return to
+	}
+	if !lsm.Ctree[to].Empty() {
+		assert(to == memLsmCtrees)
+		return to
+	}
+	for (to < len(lsm.Ctree)) && (!lsm.Ctree[to].merging) && (lsm.Ctree[to].Empty()) {
+		to++
+	}
+	return to - 1
+}
+
 func (lsm *Lsm) isMergingInRange(from, to int) bool {
 	merging := false
 	for _, ctree := range lsm.Ctree[from : to+1] {
@@ -211,7 +326,12 @@ func (lsm *Lsm) isEmptyInRange(from, to int) bool {
 
 // called under lsm.Lock()
 func (lsm *Lsm) mergeStart(from, to int) {
+	lsm.cfg.Log.Infoln("we want: ", from, to)
 	from, to = adjustFromTo(from, to)
+	if from == 1 {
+		to = lsm.pushToUp(to)
+	}
+	lsm.cfg.Log.Infoln("while we get: ", from, to)
 
 	if to == len(lsm.Ctree) {
 		lsm.addCtree()
@@ -221,6 +341,7 @@ func (lsm *Lsm) mergeStart(from, to int) {
 		return
 	}
 
+	lsm.logSizes()
 	if from == 1 {
 		assert(lsm.C1.Empty())
 		lsm.C1.stealRoot(lsm.C0)
@@ -260,6 +381,8 @@ func (lsm *Lsm) isLastCtree(idx int) bool {
 
 // merge from ctree with given index to next bigger ctree
 func (lsm *Lsm) mergeGor(from, to int) {
+	lsm.cfg.Log.Infoln(from, to)
+	lsm.logSizes()
 	err := lsm.doMerge(from, to)
 	if err != nil {
 		lsm.setError(err)
@@ -271,8 +394,9 @@ func (lsm *Lsm) mergeGor(from, to int) {
 	for _, ctree := range lsm.Ctree[from : to+1] {
 		ctree.merging = false
 	}
-	lsm.popupCtree(to)
+	//lsm.popupCtree(to)
 	lsm.mergeDone.Broadcast()
+	lsm.logSizes()
 	lsm.Unlock()
 }
 

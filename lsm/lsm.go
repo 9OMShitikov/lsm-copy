@@ -2,6 +2,7 @@ package lsm
 
 import (
 	"fmt"
+	"strconv"
 	"sync"
 	"sync/atomic"
 
@@ -116,7 +117,7 @@ func New(config Config) *Lsm {
 		}
 	}
 
-	for i := 0; i < memLsmCtrees; i++ {
+	for i := 0; i < maxLsmCtrees; i++ {
 		lsm.addCtree()
 	}
 	lsm.C0 = lsm.Ctree[0]
@@ -198,15 +199,13 @@ func (lsm *Lsm) MergeDisable() {
 }
 
 func (lsm *Lsm) mergeCheck() {
-	lsm.mergeCheckIdx--
-	if lsm.mergeCheckIdx < 0 {
-		lsm.mergeCheckIdx = len(lsm.Ctree) - 1
-	}
+	var mergeRequired bool;
+	mergeRequired, bound, next := lsm.mergeParams(lsm.mergeCheckIdx)
 
-	ctree := lsm.Ctree[lsm.mergeCheckIdx]
-	if ctree.mergeRequired() && lsm.mergeDisable == 0 {
-		lsm.mergeStart(ctree.Idx, ctree.Idx+1)
+	if mergeRequired && lsm.mergeDisable == 0 {
+		lsm.mergeStart(lsm.mergeCheckIdx, bound)
 	}
+	lsm.mergeCheckIdx = next
 }
 
 func (lsm *Lsm) encodeC0Entries() (buf *SerializeBuf) {
@@ -348,9 +347,10 @@ func (lsm *Lsm) Merge(from, to int) error {
 }
 
 // MergeAll starts sequential merge for all ctrees
-func (lsm *Lsm) MergeAll() error {
+// note: should fix mergeall due to push of to in merge
+/*func (lsm *Lsm) MergeAll() error {
 	return lsm.Merge(0, len(lsm.Ctree)-1)
-}
+}*/
 
 // Close does lsm closing checks
 func (lsm *Lsm) Close() {
@@ -368,6 +368,16 @@ func (lsm *Lsm) setError(err error) {
 		return
 	}
 	lsm.err.Store(err)
+}
+
+// logSizes puts sizes dump to log
+func (lsm *Lsm) logSizes() {
+	result := "["
+	for _, tree := range lsm.Ctree {
+		result += strconv.FormatInt(tree.Stats.LeafsSize, 10) + ", "
+	}
+	result += "]"
+	lsm.cfg.Log.Infoln(result)
 }
 
 // Error returns lsm error
