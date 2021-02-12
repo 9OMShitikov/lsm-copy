@@ -15,6 +15,7 @@ const (
 	defaultC0MergeMaxThreshold     int64 = 8 * 1024 * 1024
 	defaultMergeDirsFlushThreshold       = 4000
 
+	defaultEnableSizeAmplificationCheck = false
 	defaultMaxSizeAmplificationRatio = 0.25
 	defaultSizeRatio = 0.1
 	defaultMinMergeWidth = 2
@@ -27,6 +28,13 @@ var (
 	C0MergeMinThreshold     = defaultC0MergeMinThreshold
 	C0MergeMaxThreshold     = defaultC0MergeMaxThreshold
 	MergeDirsFlushThreshold = defaultMergeDirsFlushThreshold
+
+	/*
+	In this lsm was used universal style compaction algorithm(https://github.com/facebook/rocksdb/wiki/Universal-Compaction)
+	Size amplification works correctly if count of entries in lsm is stable
+	(incoming rate of deletion should be similar to rate of insertion)
+	 */
+	EnableSizeAmplificationCheck = defaultEnableSizeAmplificationCheck
 	MaxSizeAmplificationRatio = defaultMaxSizeAmplificationRatio
     SizeRatio = defaultSizeRatio
     MinMergeWidth = defaultMinMergeWidth
@@ -100,7 +108,7 @@ func (lsm* Lsm) checkSizeAmplification() bool {
 	return false
 }
 
-// checkSizeAmplification checks if full merge due to too big size ratio is needed
+// checkSizeRatio checks if full merge due to too big size ratio is needed
 func (lsm* Lsm) checkSizeRatio(idx int) (bool, int, int) {
 	var bound = idx + 1
 	var sum = lsm.Ctree[idx].Stats.LeafsSize
@@ -151,7 +159,7 @@ func (lsm* Lsm) mergeParams(idx int) (bool, int, int) {
 	} else {
 		mergeRequired = false
 		var bound int
-		if idx == memLsmCtrees {
+		if idx == memLsmCtrees && EnableSizeAmplificationCheck {
 			mergeRequired = lsm.checkSizeAmplification()
 			if mergeRequired {
 				return true, len(lsm.Ctree) - 1, 0

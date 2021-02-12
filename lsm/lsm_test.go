@@ -82,16 +82,10 @@ func createTestLsmIo() (io aio.LsmIo) {
 	return testCfg.io.CreateLsmIo("", testCfg.name, cache.New(1024*1024*2), new(aio.ObjectGcTest))
 }
 
-func createTestLsm() (lsm *Lsm) {
+func createTestLsmWithBloom(enableBloom bool) (lsm *Lsm) {
 	var cacheSize int64 = 1024 * 1024
 
 	io := createTestLsmIo()
-
-	enableBloom := false
-	if rand.Intn(2) > 0 {
-		enableBloom = true
-		testCfg.Log.Infof("Bloom filter enabled")
-	}
 
 	cfg := Config{
 		Name:              testCfg.name,
@@ -107,6 +101,18 @@ func createTestLsm() (lsm *Lsm) {
 		EnableBloomFilter: enableBloom,
 	}
 	lsm = New(cfg)
+	return
+}
+
+
+func createTestLsm() (lsm *Lsm) {
+	enableBloom := false
+	if rand.Intn(2) > 0 {
+		enableBloom = true
+		testCfg.Log.Infof("Bloom filter enabled")
+	}
+
+	lsm = createTestLsmWithBloom(enableBloom)
 	return
 }
 
@@ -557,3 +563,81 @@ func TestLsmLimit(t *testing.T) {
 		t.Fatalf("cnt [%v] != limit [%v]", cnt, limit)
 	}
 }
+
+// benchmark for insert
+func BenchmarkLsm_Insert(b *testing.B) {
+	TestModeOff()
+	beforeTest()
+	lsm := createTestLsmWithBloom(true)
+	defer func() {
+		fatalOnErr(lsm.Flush())
+		afterTest()
+	}()
+
+	sizes := [] int {100, 200, 300, 500, 700}
+	keyLen := 10000
+	EnableSizeAmplificationCheck = false
+	for _, size := range sizes {
+		b.Run("insert_"+strconv.Itoa(size)+"_entries_without_size_amplification_check", func(b* testing.B) {
+			for i := 0; i < size; i++ {
+				lsm.Insert(&testEntry{data: uint32(i), str: randomStrKey(i, keyLen)})
+			}
+			lsm.WaitMergeDone()
+			b.StopTimer()
+			lsm.Flush()
+			lsm.WaitMergeDone()
+			b.StartTimer()
+		})
+	}
+
+	EnableSizeAmplificationCheck = true
+	for _, size := range sizes {
+		b.Run("insert_"+strconv.Itoa(size)+"_entries_with_size_amplification_check", func(b* testing.B) {
+			for i := 0; i < size; i++ {
+				lsm.Insert(&testEntry{data: uint32(i), str: randomStrKey(i, keyLen)})
+			}
+			lsm.WaitMergeDone()
+			b.StopTimer()
+			lsm.Flush()
+			lsm.WaitMergeDone()
+			b.StartTimer()
+		})
+	}
+}
+
+func BenchmarkLsm_Search(b *testing.B) {
+	TestModeOff()
+	beforeTest()
+	lsm := createTestLsmWithBloom(true)
+	defer func() {
+		fatalOnErr(lsm.Flush())
+		afterTest()
+	}()
+
+	sizes := [] int {100, 200, 300, 500, 700}
+	keyLen := 10000
+	keys := make([]string, sizes[len(sizes) - 1])
+	for i := range keys {
+		keys[i] = randomStrKey(i, keyLen)
+	}
+
+	EnableSizeAmplificationCheck = false
+	for _, size := range sizes {
+		b.Run("search_"+strconv.Itoa(size)+"_entries_without_size_amplification_check", func(b* testing.B) {
+			b.StopTimer()
+			for i := 0; i < size; i++ {
+				lsm.Insert(&testEntry{data: uint32(i), str: keys[i]})
+			}
+			lsm.WaitMergeDone()
+			b.StartTimer()
+			for i := 0; i < size; i++ {
+				lsm.Search(&testEntryKey {str: keys[i]})
+			}
+			b.StopTimer()
+			lsm.Flush()
+			lsm.WaitMergeDone()
+			b.StartTimer()
+		})
+	}
+}
+
