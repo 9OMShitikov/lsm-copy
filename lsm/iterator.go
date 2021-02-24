@@ -17,8 +17,7 @@ type Iter struct {
 	lsm        *Lsm
 	generation uint64      // generation of LSM tree (lsm.Generation) when iterator created
 	citer      []ctreeIter // array of ctree iterators, citer[0] <-> lsm.Ctree[citerFrom], ...
-	citerFrom  int         // from .. to range of ctrees to iterate over
-	citerTo    int
+	ctrees     []*ctree
 	eqmask     uint
 	err        error
 
@@ -31,13 +30,13 @@ type Iter struct {
 // if op == GT (GE) ==> key < (<=) Key(e) <= toKey
 // if op == LT (LE) ==> toKey <= Key(e) < (<=) key
 func (lsm *Lsm) FindRange(op int, fromKey, toKey EntryKey) (iter *Iter) {
-	return lsm.findEx(op, fromKey, toKey, 0, 1<<30).Filter(entryIsNotDeleted)
+	return lsm.findEx(op, fromKey, toKey, lsm.Ctree).Filter(entryIsNotDeleted)
 }
 
 // Find returns iterator iterating through elements `e` so:
 // if op == GT (GE)
 func (lsm *Lsm) Find(op int, key EntryKey) (iter *Iter) {
-	return lsm.findEx(op, key, nil, 0, 1<<30).Filter(entryIsNotDeleted)
+	return lsm.findEx(op, key, nil, lsm.Ctree).Filter(entryIsNotDeleted)
 }
 
 // Search just tries to find single entry with given key in Lsm
@@ -56,7 +55,7 @@ func (lsm *Lsm) Search(key EntryKey) (entry Entry, err error) {
 //     array of functions to filter out entries; filtered entries will not show up at iterators output
 // from, to
 //     used to specify range of ctrees to search for suitable elements for iteration
-func (lsm *Lsm) findEx(op int, key, keyMax EntryKey, from, to int) (it *Iter) {
+func (lsm *Lsm) findEx(op int, key, keyMax EntryKey, ctrees []*ctree) (it *Iter) {
 	lsm.RLock()
 	defer lsm.RUnlock()
 
@@ -68,14 +67,12 @@ func (lsm *Lsm) findEx(op int, key, keyMax EntryKey, from, to int) (it *Iter) {
 		lsm: lsm, op: op,
 		key: key, keyMax: keyMax,
 		generation: lsm.Generation,
-		citerFrom:  from, citerTo: to,
 		limit: -1,
 	}
 
-	if to > len(lsm.Ctree)-1 {
-		to = len(lsm.Ctree) - 1
-	}
-	ctrees := lsm.Ctree[from : to+1]
+	it.ctrees = make([]*ctree, len(ctrees))
+	copy(it.ctrees, ctrees)
+
 	it.citer = make([]ctreeIter, len(ctrees))
 
 	entryKeyCmp := lsm.cfg.ComparatorWithKey
@@ -161,11 +158,7 @@ func (it *Iter) needRestart() bool {
 	}
 
 	// check more fine grained way...
-	ctrees := it.lsm.Ctree[it.citerFrom:minInt(it.citerTo+1, len(it.lsm.Ctree))]
-	if len(ctrees) > len(it.citer) { // more ctree's exist now, so need to restart
-		return true
-	}
-	for idx, ctree := range ctrees {
+	for idx, ctree := range it.ctrees {
 		if it.citer[idx].Generation != ctree.Generation { // ctree was modified
 			return true
 		}
@@ -190,20 +183,20 @@ func (it *Iter) restartIfNeeded() {
 	}
 
 	// number of ctrees could have changed, add them to it.citer array then
-	ctrees := it.lsm.Ctree[it.citerFrom:minInt(it.citerTo+1, len(it.lsm.Ctree))]
-	for idx := len(it.citer); idx < len(ctrees); idx++ {
-		citer := ctrees[idx].NewIter(op, key, it.keyMax)
+
+	newCtrees := it.lsm.Ctree[memLsmCtrees: memLsmCtrees +
+											len(it.lsm.Ctree) - len(it.ctrees)]
+	for _, ctree := range newCtrees {
+		citer := ctree.NewIter(op, key, it.keyMax)
 		if it.err = citer.Find(true); it.err != nil {
 			return
 		}
 		it.citer = append(it.citer, citer)
-	}
-	if len(it.citer) != len(ctrees) {
-		panic("wrong")
+		it.ctrees = append(it.ctrees, ctree)
 	}
 
 	// restart those ctree iters which were changed
-	for idx, ctree := range ctrees {
+	for idx, ctree := range it.ctrees {
 		citer := &it.citer[idx]
 		if citer.Generation == ctree.Generation {
 			continue

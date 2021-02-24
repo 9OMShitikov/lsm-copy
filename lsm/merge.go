@@ -22,6 +22,7 @@ const (
 	defaultMaxMergeWidth = 5
 )
 
+// note: to config
 // Variables which can be configured to tune how lsm merge work
 var (
 	MergeItemsSizeBatch     = defaultMergeItemsSizeBatch
@@ -316,6 +317,22 @@ func (lsm *Lsm) pushToUp(to int) int {
 	return to - 1
 }
 
+func (lsm *Lsm) expandIfNeeded() bool {
+	if !lsm.Ctree[memLsmCtrees].Empty() {
+		lsm.cfg.Log.Infoln("ctree adding")
+		lsm.addCtree()
+		lsm.cfg.Log.Infoln("ctree added")
+		buf := lsm.Ctree[len(lsm.Ctree) - 1]
+		lsm.logSizes()
+		copy(lsm.Ctree[memLsmCtrees + 1: len(lsm.Ctree)], lsm.Ctree[memLsmCtrees: len(lsm.Ctree) - 1])
+		lsm.cfg.Log.Infoln("ctrees copied")
+		lsm.Ctree[memLsmCtrees] = buf
+		lsm.logSizes()
+		return true
+	}
+	return false
+}
+
 func (lsm *Lsm) isMergingInRange(from, to int) bool {
 	merging := false
 	for _, ctree := range lsm.Ctree[from : to+1] {
@@ -336,19 +353,20 @@ func (lsm *Lsm) isEmptyInRange(from, to int) bool {
 func (lsm *Lsm) mergeStart(from, to int) {
 	lsm.cfg.Log.Infoln("we want: ", from, to)
 	from, to = adjustFromTo(from, to)
-	if from == 1 {
-		to = lsm.pushToUp(to)
-	}
-	lsm.cfg.Log.Infoln("while we get: ", from, to)
-
-	if to == len(lsm.Ctree) {
-		lsm.addCtree()
-	}
 
 	if lsm.isMergingInRange(from, to) || lsm.Error() != nil {
 		return
 	}
 
+	if from == memLsmCtrees - 1 {
+		lsm.cfg.Log.Infoln("flushing")
+		lsm.logSizes()
+		lsm.expandIfNeeded()
+		to = lsm.pushToUp(to)
+		lsm.logSizes()
+		lsm.cfg.Log.Infoln("flushing exp")
+	}
+	lsm.cfg.Log.Infoln("while we get: ", from, to)
 	lsm.logSizes()
 	if from == 1 {
 		assert(lsm.C1.Empty())
@@ -372,26 +390,25 @@ func (lsm *Lsm) mergeStart(from, to int) {
 		ctree.merging = true
 	}
 
-	go lsm.mergeGor(from, to)
+	ctrees := make([]*ctree, to + 1 - from)
+	copy(ctrees, lsm.Ctree[from : to+1])
+	go lsm.mergeGor(ctrees)
 }
 
-// check if there are non-empty ctrees after the one in question
-// it can be easily after annihilation of items that we have higher ctrees present in the array, but they are empty
-// e.g. imagine we merge to C3, and C4 is present but empty because everything was removed recently
-func (lsm *Lsm) isLastCtree(idx int) bool {
-	for idx++; idx < len(lsm.Ctree); idx++ {
-		if lsm.Ctree[idx].RootSize > 0 {
-			return false
-		}
+// check if it is the last tree
+// (due to compaction algorithm if there is sequence of empty trees in the end of ctrees list
+// results of merge will be put to last tree in the list)
+func (lsm *Lsm) isLastCtree(ctree *ctree) bool {
+	if ctree.Idx == memLsmCtrees {
+		return true
 	}
-	return true
+	return false
 }
 
 // merge from ctree with given index to next bigger ctree
-func (lsm *Lsm) mergeGor(from, to int) {
-	lsm.cfg.Log.Infoln(from, to)
+func (lsm *Lsm) mergeGor(ctrees []*ctree) {
 	lsm.logSizes()
-	err := lsm.doMerge(from, to)
+	err := lsm.doMerge(ctrees)
 	if err != nil {
 		lsm.setError(err)
 		lsm.cfg.Log.WithError(err).Errorf("mergeGor: failed")
@@ -399,7 +416,7 @@ func (lsm *Lsm) mergeGor(from, to int) {
 	}
 
 	lsm.Lock()
-	for _, ctree := range lsm.Ctree[from : to+1] {
+	for _, ctree := range ctrees {
 		ctree.merging = false
 	}
 	//lsm.popupCtree(to)
@@ -408,14 +425,12 @@ func (lsm *Lsm) mergeGor(from, to int) {
 	lsm.Unlock()
 }
 
-func (lsm *Lsm) doMerge(from, to int) (err error) {
+func (lsm *Lsm) doMerge(ctrees []*ctree) (err error) {
 	if err = lsm.Error(); err != nil {
 		return
 	}
 
-	lsm.debug("merge '%v' %v->%v", lsm.cfg.Name, from, to)
-
-	state := lsm.prepareMergeState(from, to)
+	state := lsm.prepareMergeState(ctrees)
 
 	rootOffs, rootSize, err := lsm.mergeTrees(state)
 	if err != nil {
@@ -448,8 +463,6 @@ func (lsm *Lsm) doMerge(from, to int) (err error) {
 	}
 	state.ctrees[last].setupRoot(rootOffs, rootSize, state.ctrees[last].mergeDiskGen, &state.stats)
 	state.ctrees[last].setupBloom(state.bloomOffs, state.bloomSize, state.bloom)
-	lsm.debug("merge '%v' done %v->%v (ctree depth %v, size %v, count %v, del %v)",
-		lsm.cfg.Name, from, to, len(state.dirs), state.stats.LeafsSize+state.stats.DirsSize, state.stats.Count, state.stats.Deleted)
 	lsm.Unlock()
 
 	// freeing blocks of just merged ctrees
@@ -488,24 +501,21 @@ func (lsm *Lsm) popupCtree(n int) {
 	}
 }
 
-func (lsm *Lsm) prepareMergeState(from, to int) *mergeState {
+func (lsm *Lsm) prepareMergeState(ctrees []*ctree) *mergeState {
 	// 1. create mergeState
 	lsm.Lock()
-	last := lsm.isLastCtree(to)
-	assert(!lsm.isEmptyInRange(from, to-1))
-	lsm.Ctree[to].mergeDiskGen = lsm.gens.nextCTreeDiskGen(lsm.Ctree[to].Idx)
+	to := ctrees[len(ctrees) - 1]
+	last := lsm.isLastCtree(ctrees[len(ctrees) - 1])
+	to.mergeDiskGen = lsm.gens.nextCTreeDiskGen(to.Idx)
 	state := &mergeState{
 		items:  SortedArray.New(lsm.cfg.Comparator, lsm.cfg.ComparatorWithKey).Prealloc(128 * 1024),
-		writer: lsm.io.NewMergeWriter(lsm.Ctree[to].getMergeID()),
+		writer: lsm.io.NewMergeWriter(to.getMergeID()),
 	}
-	state.ctrees = make([]*ctree, to-from+1)
-	for i := 0; i < len(state.ctrees); i++ {
-		state.ctrees[i] = lsm.Ctree[from+i]
-	}
+	state.ctrees = ctrees
 	lsm.Unlock()
 
 	// 2. create iterator over entries to be merged
-	state.it = lsm.findEx(GE, nil, nil, from, to)
+	state.it = lsm.findEx(GE, nil, nil, ctrees)
 	if last {
 		// do not merge deleted entries in case merging into last ctree
 		state.it = state.it.Filter(entryIsNotDeleted)
