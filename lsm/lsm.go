@@ -117,7 +117,7 @@ func New(config Config) *Lsm {
 		}
 	}
 
-	for i := 0; i < maxLsmCtrees; i++ {
+	for i := 0; i <= memLsmCtrees; i++ {
 		lsm.addCtree()
 	}
 	lsm.C0 = lsm.Ctree[0]
@@ -294,7 +294,7 @@ func (lsm *Lsm) ReadDesc(dbuf *DeserializeBuf) (err error) {
 	}
 
 	for i := 0; i < int(roots); i++ {
-		ctree := &ctree{Idx: memLsmCtrees + i, lsm: lsm}
+		ctree := &ctree{Idx: memLsmCtrees + int(roots) - 1 - i, lsm: lsm}
 		ctree.DiskGeneration = dbuf.DecodeFixedUint64()
 		ctree.RootOffs = dbuf.DecodeFixedInt64()
 		ctree.RootSize = dbuf.DecodeFixedInt64()
