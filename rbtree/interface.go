@@ -57,3 +57,7 @@ type OrderedIter interface {
 	// remove current element
 	Remove()
 }
+
+// ReplaceAction is custom replace action, that makes result item from
+// existing item and new item in InsertOrReplace
+type ReplaceAction func(newItem, existingItem interface{}) (resultItem interface{})

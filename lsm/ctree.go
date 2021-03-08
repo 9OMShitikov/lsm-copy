@@ -71,17 +71,21 @@ type ctreeIter struct {
 	trackBlocks bool
 }
 
+func rbtreeNew(lsm *Lsm) *rbtree.Tree {
+   return rbtree.NewWithReplaceAction(lsm.cfg.Comparator, lsm.cfg.ComparatorWithKey, lsm.cfg.MergeActionCb)
+}
+
 func ctreeNew(lsm *Lsm, idx int) (ct *ctree) {
 	ct = &ctree{lsm: lsm, Idx: idx}
 	if idx == 0 {
-		ct.setRoot(&ctreeNode{items: rbtree.New(lsm.cfg.Comparator, lsm.cfg.ComparatorWithKey)})
+		ct.setRoot(&ctreeNode{items: rbtreeNew(lsm)})
 	}
 	return
 }
 
 func (ctree *ctree) Insert(item Entry) {
 	root := ctree.getRoot()
-	old := root.items.(*rbtree.Tree).InsertOrReplace(item, true)
+	old, result := root.items.(*rbtree.Tree).InsertOrReplace(item, true)
 	if item.LsmDeleted() {
 		atomic.AddInt64(&ctree.Stats.Deleted, 1)
 	}
@@ -96,8 +100,9 @@ func (ctree *ctree) Insert(item Entry) {
 		}
 		stateRemove(&root.stateCsum, oldEntry)
 	}
-	atomic.AddInt64(&ctree.Stats.LeafsSize, int64(item.Size()))
-	stateAdd(&root.stateCsum, item)
+	resultEntry := result.(Entry)
+	atomic.AddInt64(&ctree.Stats.LeafsSize, int64(resultEntry.Size()))
+	stateAdd(&root.stateCsum, resultEntry)
 }
 
 func (ctree *ctree) getRoot() (root *ctreeNode) {
@@ -171,7 +176,7 @@ func (ctree *ctree) stealRoot(src *ctree) {
 	src.setupBloom(0, 0, nil)
 
 	if src.Idx == 0 {
-		src.setRoot(&ctreeNode{items: rbtree.New(ctree.lsm.cfg.Comparator, ctree.lsm.cfg.ComparatorWithKey)})
+		src.setRoot(&ctreeNode{items: rbtreeNew(ctree.lsm)})
 	}
 }
 

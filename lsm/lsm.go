@@ -30,6 +30,11 @@ type Config struct {
 	ComparatorWithKey rbtree.Comparator
 	Comparator2Keys   rbtree.Comparator
 
+	// On lsm merges or inserts to C0 we have to produce resulting item from pair (fresh item, old item).
+	// By default result item = fresh item, but behaviour can be customizable by this cb (used for bitLsm).
+	// SHOULD be idempotent and associative.
+	MergeActionCb rbtree.ReplaceAction
+
 	CreateEntry    EntryCreateFunc
 	CreateEntryKey EntryKeyCreateFunc
 
