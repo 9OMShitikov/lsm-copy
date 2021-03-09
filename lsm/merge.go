@@ -8,39 +8,37 @@ import (
 	SortedArray "github.com/neganovalexey/search/sarray"
 )
 
-// defaults for merge-configuring values
-const (
-	defaultMergeItemsSizeBatch           = 2 * 1024 * 1024
-	defaultC0MergeMinThreshold     int64 = 2 * 1024 * 1024
-	defaultC0MergeMaxThreshold     int64 = 8 * 1024 * 1024
-	defaultMergeDirsFlushThreshold       = 4000
-
-	defaultEnableSizeAmplificationCheck = false
-	defaultMaxSizeAmplificationRatio = 0.25
-	defaultSizeRatio = 0.1
-	defaultMinMergeWidth = 2
-	defaultMaxMergeWidth = 5
-)
-
-// note: to config
-// Variables which can be configured to tune how lsm merge work
-var (
-	MergeItemsSizeBatch     = defaultMergeItemsSizeBatch
-	C0MergeMinThreshold     = defaultC0MergeMinThreshold
-	C0MergeMaxThreshold     = defaultC0MergeMaxThreshold
-	MergeDirsFlushThreshold = defaultMergeDirsFlushThreshold
+type MergeConfig  struct {
+	MergeItemsSizeBatch int
+	C0MergeMinThreshold int64
+	C0MergeMaxThreshold int64
+	MergeDirsFlushThreshold int
 
 	/*
-	In this lsm was used universal style compaction algorithm(https://github.com/facebook/rocksdb/wiki/Universal-Compaction)
-	Size amplification works correctly if count of entries in lsm is stable
-	(incoming rate of deletion should be similar to rate of insertion)
-	 */
-	EnableSizeAmplificationCheck = defaultEnableSizeAmplificationCheck
-	MaxSizeAmplificationRatio = defaultMaxSizeAmplificationRatio
-    SizeRatio = defaultSizeRatio
-    MinMergeWidth = defaultMinMergeWidth
-    MaxMergeWidth = defaultMaxMergeWidth
-)
+		In this lsm was used universal style compaction algorithm(https://github.com/facebook/rocksdb/wiki/Universal-Compaction)
+		Size amplification works correctly if count of entries in lsm is stable
+		(incoming rate of deletion should be similar to rate of insertion)
+	*/
+	EnableSizeAmplificationCheck bool
+	MaxSizeAmplificationRatio float64
+	SizeRatio float64
+	MinMergeWidth int
+	MaxMergeWidth int
+}
+
+// defaults for merge-configuring values
+var defaultMergeCfg = MergeConfig{
+	MergeItemsSizeBatch: 2 * 1024 * 1024,
+	C0MergeMinThreshold: 2 * 1024 * 1024,
+	C0MergeMaxThreshold: 8 * 1024 * 1024,
+	MergeDirsFlushThreshold: 4000,
+
+	EnableSizeAmplificationCheck: false,
+	MaxSizeAmplificationRatio: 0.25,
+	SizeRatio: 0.1,
+	MinMergeWidth: 2,
+	MaxMergeWidth: 5,
+}
 
 type mergeState struct {
 	items     *SortedArray.Array //rbtree.OrderedTree
@@ -69,7 +67,7 @@ type mergeState struct {
 func (ctree *ctree) mergeSizeThreshold() int64 {
 	idx := ctree.Idx
 
-	c0Limit := C0MergeMaxThreshold
+	c0Limit := ctree.lsm.cfg.MergeCfg.C0MergeMaxThreshold
 
 	if idx < memLsmCtrees {
 		return c0Limit
@@ -101,7 +99,7 @@ func (lsm* Lsm) checkSizeAmplification() bool {
 		return true
 	}
 	ratio := float64(sum) / float64(lsm.Ctree[len(lsm.Ctree) - 1].Stats.LeafsSize)
-	if ratio > MaxSizeAmplificationRatio {
+	if ratio > lsm.cfg.MergeCfg.MaxSizeAmplificationRatio {
 		lsm.cfg.Log.Infoln("Amp ratio: ", ratio)
 		return true
 	}
@@ -118,9 +116,9 @@ func (lsm* Lsm) checkSizeRatio(idx int) (bool, int, int) {
 		nonEmptyTrees = 1
 	}
 
-	for (nonEmptyTrees != MaxMergeWidth) && (bound < len(lsm.Ctree)) {
+	for (nonEmptyTrees != lsm.cfg.MergeCfg.MaxMergeWidth) && (bound < len(lsm.Ctree)) {
 		currentSize := lsm.Ctree[bound].Stats.LeafsSize
-		if (sum == 0) || (float64(currentSize) / float64(sum) <= (100 + SizeRatio) / 100.0) {
+		if (sum == 0) || (float64(currentSize) / float64(sum) <= (100 + lsm.cfg.MergeCfg.SizeRatio) / 100.0) {
 			sum += currentSize
 			bound++
 			if currentSize != 0 {
@@ -133,7 +131,7 @@ func (lsm* Lsm) checkSizeRatio(idx int) (bool, int, int) {
 
 	bound--
 
-	var mergeRequired = (bound != idx) && (nonEmptyTrees >= MinMergeWidth)
+	var mergeRequired = (bound != idx) && (nonEmptyTrees >= lsm.cfg.MergeCfg.MinMergeWidth)
 	var next = bound + 1
 
 	if next == len(lsm.Ctree) {
@@ -160,7 +158,7 @@ func (lsm* Lsm) mergeParams(idx int) (bool, int, int) {
 	} else {
 		mergeRequired = false
 		var bound int
-		if idx == memLsmCtrees && EnableSizeAmplificationCheck {
+		if idx == memLsmCtrees && lsm.cfg.MergeCfg.EnableSizeAmplificationCheck {
 			mergeRequired = lsm.checkSizeAmplification()
 			if mergeRequired {
 				return true, len(lsm.Ctree) - 1, 0
@@ -219,7 +217,7 @@ func (lsm *Lsm) mergeSaveDirs(state *mergeState, idx int) (err error) {
 
 func (lsm *Lsm) mergeSaveDirsIfNeeded(state *mergeState) (err error) {
 	for i := 0; i < len(state.dirs); i++ {
-		if len(state.dirs[i]) < MergeDirsFlushThreshold {
+		if len(state.dirs[i]) < lsm.cfg.MergeCfg.MergeDirsFlushThreshold {
 			continue
 		}
 
@@ -548,7 +546,7 @@ func (lsm *Lsm) mergeTrees(state *mergeState) (rootOffs, rootSize int64, err err
 			state.bloom.insert(it.Result.GetKey())
 		}
 		state.itemsSize += it.Result.Size()
-		if state.itemsSize > MergeItemsSizeBatch {
+		if state.itemsSize > lsm.cfg.MergeCfg.MergeItemsSizeBatch {
 			if err = lsm.mergeSaveEntries(state); err != nil {
 				return
 			}
