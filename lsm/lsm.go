@@ -60,6 +60,9 @@ type Config struct {
 	EnableBloomFilter bool
 
 	Log *logrus.Logger
+
+	// merge-configuring values
+	MergeCfg MergeConfig
 }
 
 // Lsm is log-structured-merge tree implementation
@@ -112,6 +115,11 @@ func New(config Config) *Lsm {
 	if lsm.gens == nil {
 		lsm.gens = &defaultGenSupplier{lsm: lsm}
 	}
+
+	if lsm.cfg.MergeCfg.MaxMergeWidth == 0 {
+		lsm.cfg.MergeCfg = defaultMergeCfg
+	}
+
 	lsm.mergeDone.L = lsm
 	if lsm.cfg.onCtreeCreated == nil {
 		lsm.cfg.onCtreeCreated = func(*ctree) error { return nil }
