@@ -2,6 +2,7 @@ package lsm
 
 import (
 	"runtime"
+	"strconv"
 	"sync/atomic"
 
 	"github.com/neganovalexey/search/io"
@@ -81,7 +82,7 @@ func (ctree *ctree) mergeRequired() bool {
 
 // checkSizeAmplification checks if full merge due to expected size amplification is needed
 func (lsm* Lsm) checkSizeAmplification() bool {
-	lsm.cfg.Log.Infoln("check size amp:")
+	lsm.debug("checking size amp:")
 	lsm.logSizes()
 	if len(lsm.Ctree) <= memLsmCtrees {
 		return false
@@ -91,19 +92,17 @@ func (lsm* Lsm) checkSizeAmplification() bool {
 		sum += lsm.Ctree[i].Stats.LeafsSize
 	}
 	if sum == 0 {
-		lsm.cfg.Log.Infoln("Zero sum")
 		return false
 	}
 	if lsm.Ctree[len(lsm.Ctree) - 1].Stats.LeafsSize == 0 {
-		lsm.cfg.Log.Infoln("Zero last")
 		return true
 	}
 	ratio := float64(sum) / float64(lsm.Ctree[len(lsm.Ctree) - 1].Stats.LeafsSize)
 	if ratio > lsm.cfg.MergeCfg.MaxSizeAmplificationRatio {
-		lsm.cfg.Log.Infoln("Amp ratio: ", ratio)
+		lsm.debug("Amp ratio: ", ratio)
 		return true
 	}
-	lsm.cfg.Log.Infoln("Amp no results")
+	lsm.debug("Amp no results")
 	return false
 }
 
@@ -146,7 +145,6 @@ func (lsm* Lsm) checkSizeRatio(idx int) (bool, int, int) {
 func (lsm* Lsm) mergeParams(idx int) (bool, int, int) {
 	var mergeRequired bool
 	var next int
-	lsm.cfg.Log.Infoln("checking merge strt idx: ", idx)
 	if idx < memLsmCtrees {
 		ctree := lsm.Ctree[idx]
 		mergeRequired = ctree.Stats.LeafsSize > ctree.mergeSizeThreshold()
@@ -316,16 +314,12 @@ func (lsm *Lsm) pushToUp(to int) int {
 }
 
 func (lsm *Lsm) expandIfNeeded() bool {
+	lsm.pushCtreesUp()
 	if !lsm.Ctree[memLsmCtrees].Empty() {
-		lsm.cfg.Log.Infoln("ctree adding")
 		lsm.addCtree()
-		lsm.cfg.Log.Infoln("ctree added")
 		buf := lsm.Ctree[len(lsm.Ctree) - 1]
-		lsm.logSizes()
 		copy(lsm.Ctree[memLsmCtrees + 1: len(lsm.Ctree)], lsm.Ctree[memLsmCtrees: len(lsm.Ctree) - 1])
-		lsm.cfg.Log.Infoln("ctrees copied")
 		lsm.Ctree[memLsmCtrees] = buf
-		lsm.logSizes()
 		return true
 	}
 	return false
@@ -349,7 +343,6 @@ func (lsm *Lsm) isEmptyInRange(from, to int) bool {
 
 // called under lsm.Lock()
 func (lsm *Lsm) mergeStart(from, to int) {
-	lsm.cfg.Log.Infoln("we want: ", from, to)
 	from, to = adjustFromTo(from, to)
 
 	if lsm.isMergingInRange(from, to) || lsm.Error() != nil {
@@ -357,15 +350,9 @@ func (lsm *Lsm) mergeStart(from, to int) {
 	}
 
 	if from == memLsmCtrees - 1 {
-		lsm.cfg.Log.Infoln("flushing")
-		lsm.logSizes()
 		lsm.expandIfNeeded()
 		to = lsm.pushToUp(to)
-		lsm.logSizes()
-		lsm.cfg.Log.Infoln("flushing exp")
 	}
-	lsm.cfg.Log.Infoln("while we get: ", from, to)
-	lsm.logSizes()
 	if from == 1 {
 		assert(lsm.C1.Empty())
 		lsm.C1.stealRoot(lsm.C0)
@@ -388,6 +375,8 @@ func (lsm *Lsm) mergeStart(from, to int) {
 		ctree.merging = true
 	}
 
+	lsm.debug("merging:")
+	lsm.logSizes()
 	ctrees := make([]*ctree, to + 1 - from)
 	copy(ctrees, lsm.Ctree[from : to+1])
 	go lsm.mergeGor(ctrees)
@@ -405,7 +394,11 @@ func (lsm *Lsm) isLastCtree(ctree *ctree) bool {
 
 // merge from ctree with given index to next bigger ctree
 func (lsm *Lsm) mergeGor(ctrees []*ctree) {
-	lsm.logSizes()
+	logs := "merge indices: "
+	for _, ctree := range ctrees {
+		logs += strconv.Itoa(ctree.Idx) + ", "
+	}
+	lsm.debug(logs)
 	err := lsm.doMerge(ctrees)
 	if err != nil {
 		lsm.setError(err)
@@ -417,8 +410,8 @@ func (lsm *Lsm) mergeGor(ctrees []*ctree) {
 	for _, ctree := range ctrees {
 		ctree.merging = false
 	}
-	//lsm.popupCtree(to)
 	lsm.mergeDone.Broadcast()
+	lsm.debug("merged, after merge sizes: ")
 	lsm.logSizes()
 	lsm.Unlock()
 }
@@ -489,13 +482,29 @@ func (lsm *Lsm) doMerge(ctrees []*ctree) (err error) {
 	return
 }
 
-// if result of the merge became much smaller due to deleted elements, than pop it up to the upper levels
-func (lsm *Lsm) popupCtree(n int) {
-	for i := n - 1; i >= memLsmCtrees; i-- {
-		if !lsm.Ctree[i].Empty() || atomic.LoadInt64(&lsm.Ctree[i+1].Stats.LeafsSize) > lsm.Ctree[i].mergeSizeThreshold()/2 {
-			break
+// pushing ctrees up if there is free space
+func (lsm *Lsm) pushCtreesUp() {
+	start := memLsmCtrees
+	finish := start
+	for finish < len(lsm.Ctree) {
+		for finish < len(lsm.Ctree) && !lsm.Ctree[finish].merging {
+			finish++
 		}
-		lsm.Ctree[i].stealRoot(lsm.Ctree[i+1])
+
+		if finish != start {
+			nonEmptyCtrees := 0
+			for i := finish - 1; i >= start; i-- {
+				if !lsm.Ctree[i].Empty() {
+					nonEmptyCtrees++
+					if i != finish - nonEmptyCtrees {
+						lsm.Ctree[finish - nonEmptyCtrees].stealRoot(lsm.Ctree[i])
+					}
+				}
+			}
+		}
+
+		finish++
+		start = finish
 	}
 }
 

@@ -16,8 +16,8 @@ func lsmInsertBench(b *testing.B, stringGenerator func(int, int) string, keysOrd
 		afterTest()
 	}()
 
-	sizes := [] int {100, 200, 300, 500, 700}
-	keyLen := 10000
+	sizes := [] int {700000, 800000, 900000, 1000000}
+	keyLen := 100
 	lsm.cfg.MergeCfg.EnableSizeAmplificationCheck = false
 
 	benchInsert := func(b* testing.B, size int) {
@@ -55,15 +55,15 @@ func ascendingStrKey(n int, sz int) string {
 	return strings.Repeat("0", sz - len(res)) + res
 }
 
-func BenchmarkLsm_Insert_RandomKeys(b *testing.B) {
+func BenchmarkLsmInsertRandomKeys(b *testing.B) {
 	lsmInsertBench(b, randomStrKey, "random_keys_order")
 }
 
-func BenchmarkLsm_Insert_AscendingKeys(b *testing.B) {
-	lsmInsertBench(b, ascendingStrKey, "random_keys_order")
+func BenchmarkLsmInsertAscendingKeys(b *testing.B) {
+	lsmInsertBench(b, ascendingStrKey, "ascending_keys_order")
 }
 
-func BenchmarkLsm_Search(b *testing.B) {
+func BenchmarkLsmSearch(b *testing.B) {
 	TestModeOff()
 	beforeTest()
 	lsm := createTestLsmWithBloom(true)

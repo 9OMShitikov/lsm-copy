@@ -141,7 +141,7 @@ func New(config Config) *Lsm {
 
 // should be called under lsm.Lock()
 func (lsm *Lsm) addCtree() {
-	assert(len(lsm.Ctree) < maxLsmCtrees)
+	//assert(len(lsm.Ctree) < maxLsmCtrees)
 	lsm.Ctree = append(lsm.Ctree, ctreeNew(lsm, len(lsm.Ctree)))
 	lsm.Generation = lsm.gens.nextLsmGen()
 }
@@ -387,10 +387,11 @@ func (lsm *Lsm) setError(err error) {
 func (lsm *Lsm) logSizes() {
 	result := "["
 	for _, tree := range lsm.Ctree {
-		result += strconv.FormatInt(tree.Stats.LeafsSize, 10) + ", "
+		result += "{idx: " + strconv.Itoa(tree.Idx) + ", size: " +
+			strconv.FormatInt(tree.Stats.LeafsSize, 10) + "}" + ", "
 	}
 	result += "]"
-	lsm.cfg.Log.Infoln(result)
+	lsm.debug(result)
 }
 
 // Error returns lsm error
@@ -415,7 +416,7 @@ func (lsm *Lsm) Name() string {
 }
 
 // CurCtreeObjectNames returns array of object names,
-// which correcpond to most recent ctrees states, which
+// which correspond to most recent ctrees states, which
 // describe current lsm state
 func (lsm *Lsm) CurCtreeObjectNames() []string {
 	names := make([]string, len(lsm.Ctree))

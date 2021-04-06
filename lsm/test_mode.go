@@ -5,6 +5,7 @@ import (
 )
 
 var savedDefaults MergeConfig
+
 // TestModeOn enables integrity checks and tunes some configuration variables
 // to be suitable for tests and debugging
 func TestModeOn() {

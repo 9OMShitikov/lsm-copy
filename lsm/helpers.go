@@ -25,7 +25,7 @@ func FirstErr(errs ...error) error {
 }
 
 func (lsm *Lsm) debug(fmt string, args ...interface{}) {
-	lsm.cfg.Log.Debugf(fmt, args...)
+	lsm.cfg.Log.Debugf(fmt + "\n", args...)
 }
 
 func (lsm *Lsm) debug2(fmt string, args ...interface{}) {
