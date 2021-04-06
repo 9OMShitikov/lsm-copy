@@ -7,42 +7,35 @@ import (
 )
 
 // benchmark for insert
-func lsmInsertBench(b *testing.B, stringGenerator func(int, int) string, keysOrder string) {
+var benchInsertSizes = [] int {100000, 300000, 500000, 700000, 900000, 1100000, 1300000, 1500000, 2000000}
+var benchInsertKeyLen = 100
+func lsmInsertBench(b *testing.B, stringGenerator func(int, int) string,
+	sizes []int, keyLen int, keysOrder string) {
 	TestModeOff()
 	beforeTest()
-	lsm := createTestLsmWithBloom(true)
-	defer func() {
-		fatalOnErr(lsm.Flush())
-		afterTest()
-	}()
 
-	sizes := [] int {700000, 800000, 900000, 1000000}
-	keyLen := 100
-	lsm.cfg.MergeCfg.EnableSizeAmplificationCheck = false
-
-	benchInsert := func(b* testing.B, size int) {
+	benchInsert := func(b* testing.B, size int, sizeAmpCheck bool) {
+		b.StopTimer()
+		lsm := createTestLsmWithBloom(true)
+		lsm.cfg.MergeCfg.EnableSizeAmplificationCheck = sizeAmpCheck
+		b.StartTimer()
 		for i := 0; i < size; i++ {
 			lsm.Insert(&testEntry{data: uint32(i), str: stringGenerator(i, keyLen)})
 		}
 		lsm.WaitMergeDone()
-		b.StopTimer()
-		lsm.Flush()
-		lsm.WaitMergeDone()
-		b.StartTimer()
 	}
 
 	for _, size := range sizes {
 		b.Run("insert_" + keysOrder + "_" +
 			strconv.Itoa(size) + "_entries_without_size_amplification_check", func(b* testing.B) {
-			benchInsert(b, size)
+			benchInsert(b, size, false)
 		})
 	}
 
-	lsm.cfg.MergeCfg.EnableSizeAmplificationCheck = true
 	for _, size := range sizes {
 		b.Run("insert_"+ keysOrder + "_" +
 			strconv.Itoa(size) + "_entries_with_size_amplification_check", func(b* testing.B) {
-			benchInsert(b, size)
+			benchInsert(b, size, true)
 		})
 	}
 }
@@ -56,21 +49,16 @@ func ascendingStrKey(n int, sz int) string {
 }
 
 func BenchmarkLsmInsertRandomKeys(b *testing.B) {
-	lsmInsertBench(b, randomStrKey, "random_keys_order")
+	lsmInsertBench(b, randomStrKey, benchInsertSizes, benchInsertKeyLen, "random_keys_order")
 }
 
 func BenchmarkLsmInsertAscendingKeys(b *testing.B) {
-	lsmInsertBench(b, ascendingStrKey, "ascending_keys_order")
+	lsmInsertBench(b, ascendingStrKey, benchInsertSizes, benchInsertKeyLen, "ascending_keys_order")
 }
 
 func BenchmarkLsmSearch(b *testing.B) {
 	TestModeOff()
 	beforeTest()
-	lsm := createTestLsmWithBloom(true)
-	defer func() {
-		fatalOnErr(lsm.Flush())
-		afterTest()
-	}()
 
 	sizes := [] int {100, 200, 300, 500, 700}
 	keyLen := 10000
@@ -79,9 +67,10 @@ func BenchmarkLsmSearch(b *testing.B) {
 		keys[i] = randomStrKey(i, keyLen)
 	}
 
-	lsm.cfg.MergeCfg.EnableSizeAmplificationCheck = false
 	for _, size := range sizes {
 		b.Run("search_"+strconv.Itoa(size)+"_entries_without_size_amplification_check", func(b* testing.B) {
+			lsm := createTestLsmWithBloom(true)
+			lsm.cfg.MergeCfg.EnableSizeAmplificationCheck = false
 			b.StopTimer()
 			for i := 0; i < size; i++ {
 				lsm.Insert(&testEntry{data: uint32(i), str: keys[i]})
