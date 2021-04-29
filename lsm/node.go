@@ -127,7 +127,7 @@ func (ctree *ctree) decodeEntries(hdr *ctreeNodeHdr) (entries rbtree.OrderedTree
 	entryOverhead := 0
 	lsm := ctree.lsm
 	if ctree.Idx < memLsmCtrees {
-		entries = rbtree.New(lsm.cfg.Comparator, lsm.cfg.ComparatorWithKey)
+		entries = rbtreeNew(ctree.lsm)
 		memSize += int(unsafe.Sizeof(rbtree.Tree{}))
 		entryOverhead = 8 + int(unsafe.Sizeof(rbtree.Node{})) // ptr to node + node struct
 	} else {

@@ -1,10 +1,6 @@
 package lsm
 
 import (
-	"context"
-	"crypto/sha512"
-	"encoding/base64"
-	"encoding/binary"
 	"flag"
 	"fmt"
 	"math/rand"
@@ -15,12 +11,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/gops/agent"
 	"github.com/sirupsen/logrus"
 
-	"github.com/google/gops/agent"
 	"github.com/neganovalexey/search/cache"
-	aio "github.com/neganovalexey/search/io"
 	"github.com/neganovalexey/search/rbtree"
+	"github.com/neganovalexey/search/testutil"
+	aio "github.com/neganovalexey/search/io"
 )
 
 type testConfig struct {
@@ -51,15 +48,6 @@ func initLogging() {
 	testCfg.Log = ll
 }
 
-// GetTestIoConfig constructs IO config with specified logger
-func GetTestIoConfig(log *logrus.Logger) aio.Config {
-	return aio.Config{
-		Root: "test-folder-" + randomStrKey(int(time.Now().UnixNano()), 16),
-		Log:  log,
-		Ctx:  context.Background(),
-	}
-}
-
 func TestMain(m *testing.M) {
 	initLogging()
 
@@ -74,22 +62,10 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-// randomStrKey returns stable random key for given n of length sz
-// nolint: unparam
-func randomStrKey(n, sz int) (res string) {
-	for len(res) < sz {
-		buf := [8]byte{}
-		binary.BigEndian.PutUint64(buf[:], uint64(n))
-		h := sha512.Sum512(buf[:])
-		res = res + base64.StdEncoding.EncodeToString(h[:])
-	}
-	return res[:sz]
-}
-
 func beforeTest() {
 	var err error
 
-	iocfg := GetTestIoConfig(testCfg.Log)
+	iocfg := testutil.GetTestIoConfig(testCfg.Log)
 	testCfg.io, err = aio.New(iocfg)
 	fatalOnErr(err)
 
@@ -447,8 +423,8 @@ func TestLargeLsmSearch(t *testing.T) {
 	size := 40 + rand.Intn(100)
 	keyLen := 100000
 	for n := 0; n < size; n++ {
-		fatalOnErr(lsm.Insert(&testEntry{data: uint32(n), str: randomStrKey(n, keyLen)}))
-		rb.Insert(&testEntry{data: uint32(n), str: randomStrKey(n, keyLen)})
+		fatalOnErr(lsm.Insert(&testEntry{data: uint32(n), str: testutil.RandomStrKey(n, keyLen)}))
+		rb.Insert(&testEntry{data: uint32(n), str: testutil.RandomStrKey(n, keyLen)})
 	}
 	err := checkLsm(lsm, rb)
 	if err != nil {
@@ -466,16 +442,16 @@ func TestLargeLsmSearch(t *testing.T) {
 	lastCtree := lsm.Ctree[len(lsm.Ctree)-1]
 	assert(atomic.LoadInt64(&lastCtree.Stats.DirsSize) != lastCtree.RootSize)
 
-	e, err := lsm.Search(&testEntryKey{str: randomStrKey(2, keyLen)})
+	e, err := lsm.Search(&testEntryKey{str: testutil.RandomStrKey(2, keyLen)})
 	fatalOnErr(err)
-	assert(e.(*testEntry).str == randomStrKey(2, keyLen))
-	e, err = lsm.Search(&testEntryKey{str: randomStrKey(size-1, keyLen)})
+	assert(e.(*testEntry).str == testutil.RandomStrKey(2, keyLen))
+	e, err = lsm.Search(&testEntryKey{str: testutil.RandomStrKey(size-1, keyLen)})
 	fatalOnErr(err)
-	assert(e.(*testEntry).str == randomStrKey(size-1, keyLen))
-	e, err = lsm.Search(&testEntryKey{str: randomStrKey(size/2, keyLen)})
+	assert(e.(*testEntry).str == testutil.RandomStrKey(size-1, keyLen))
+	e, err = lsm.Search(&testEntryKey{str: testutil.RandomStrKey(size/2, keyLen)})
 	fatalOnErr(err)
-	assert(e.(*testEntry).str == randomStrKey(size/2, keyLen))
-	e, err = lsm.Search(&testEntryKey{str: randomStrKey(size, keyLen)})
+	assert(e.(*testEntry).str == testutil.RandomStrKey(size/2, keyLen))
+	e, err = lsm.Search(&testEntryKey{str: testutil.RandomStrKey(size, keyLen)})
 	fatalOnErr(err)
 	assert(e == nil)
 }

@@ -16,6 +16,7 @@ type Tree struct {
 	count             int
 	Comparator        Comparator
 	ComparatorWithKey Comparator
+	ReplaceAction     ReplaceAction
 }
 
 // Node is a single element within the tree
@@ -48,13 +49,19 @@ func NewWithStringComparator() *Tree {
 	return &Tree{Comparator: StringComparator, ComparatorWithKey: StringComparator}
 }
 
+// NewWithReplaceAction a red-black tree with the custom comparator and custom replace action
+func NewWithReplaceAction(comparator Comparator, comparatorWithKey Comparator, replaceAction ReplaceAction) *Tree {
+	return &Tree{Comparator: comparator, ComparatorWithKey: comparatorWithKey, ReplaceAction: replaceAction}
+}
+
 // Insert item to tree (without replacing existing element)
 func (tree *Tree) Insert(item interface{}) (existing interface{}) {
-	return tree.InsertOrReplace(item, false)
+	existing, _ = tree.InsertOrReplace(item, false)
+	return
 }
 
 // InsertOrReplace item to tree with given action (replace or not) on existing element
-func (tree *Tree) InsertOrReplace(item interface{}, replace bool) (existing interface{}) {
+func (tree *Tree) InsertOrReplace(item interface{}, replace bool) (existing, result interface{}) {
 	existing = nil
 	insertedNode := &Node{Item: item, color: red}
 	if tree.Root == nil {
@@ -67,8 +74,12 @@ func (tree *Tree) InsertOrReplace(item interface{}, replace bool) (existing inte
 			if compare == 0 {
 				existing = node.Item
 				if replace {
-					node.Item = item
-					return existing
+					result = item
+					if tree.ReplaceAction != nil {
+						result = tree.ReplaceAction(existing, result)
+					}
+					node.Item = result
+					return existing, result
 				}
 				// fallthrough to <0 case...
 			}
@@ -93,7 +104,7 @@ func (tree *Tree) InsertOrReplace(item interface{}, replace bool) (existing inte
 	}
 	tree.insertCase1(insertedNode)
 	tree.count++
-	return existing
+	return existing, item
 }
 
 // Search the node in the tree by key and returns its value or nil if key is not found in tree.
