@@ -1,2 +1,3 @@
 *.log
 test-folder*
+.ipynb_checkpoints

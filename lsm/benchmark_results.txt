@@ -1,0 +1,113 @@
+[36mINFO[0m[0000] SEED = 1619994975446366641                   
+[36mINFO[0m[0003] buf=[]byte{0x2, 0x31, 0x30, 0xa, 0x2, 0x31, 0x31, 0xb, 0x2, 0x31, 0x32, 0xc, 0x2, 0x31, 0x33, 0xd, 0x2, 0x31, 0x34, 0xe, 0x2, 0x31, 0x35, 0xf, 0x2, 0x31, 0x36, 0x10, 0x2, 0x31, 0x37, 0x11, 0x2, 0x31, 0x38, 0x12, 0x2, 0x31, 0x39, 0x13, 0x2, 0x32, 0x30, 0x14, 0x2, 0x32, 0x31, 0x15, 0x2, 0x32, 0x32, 0x16, 0x2, 0x32, 0x33, 0x17, 0x2, 0x32, 0x34, 0x18, 0x2, 0x32, 0x35, 0x19, 0x2, 0x32, 0x36, 0x1a, 0x2, 0x32, 0x37, 0x1b, 0x2, 0x32, 0x38, 0x1c, 0x2, 0x32, 0x39, 0x1d, 0x2, 0x33, 0x30, 0x1e, 0x2, 0x33, 0x31, 0x1f, 0x2, 0x33, 0x32, 0x20, 0x2, 0x33, 0x33, 0x21, 0x2, 0x33, 0x34, 0x22, 0x2, 0x33, 0x35, 0x23, 0x2, 0x33, 0x36, 0x24, 0x2, 0x33, 0x37, 0x25, 0x2, 0x33, 0x38, 0x26, 0x2, 0x33, 0x39, 0x27, 0x2, 0x34, 0x30, 0x28, 0x2, 0x34, 0x31, 0x29, 0x2, 0x34, 0x32, 0x2a, 0x2, 0x34, 0x33, 0x2b, 0x2, 0x34, 0x34, 0x2c, 0x2, 0x34, 0x35, 0x2d, 0x2, 0x34, 0x36, 0x2e, 0x2, 0x34, 0x37, 0x2f, 0x2, 0x34, 0x38, 0x30, 0x2, 0x34, 0x39, 0x31, 0x2, 0x35, 0x30, 0x32, 0x2, 0x35, 0x31, 0x33, 0x2, 0x35, 0x32, 0x34, 0x2, 0x35, 0x33, 0x35, 0x2, 0x35, 0x34, 0x36, 0x2, 0x35, 0x35, 0x37, 0x2, 0x35, 0x36, 0x38, 0x2, 0x35, 0x37, 0x39, 0x2, 0x35, 0x38, 0x3a, 0x2, 0x35, 0x39, 0x3b, 0x2, 0x36, 0x30, 0x3c, 0x2, 0x36, 0x31, 0x3d, 0x2, 0x36, 0x32, 0x3e, 0x2, 0x36, 0x33, 0x3f, 0x2, 0x36, 0x34, 0x40, 0x2, 0x36, 0x35, 0x41, 0x2, 0x36, 0x36, 0x42, 0x2, 0x36, 0x37, 0x43, 0x2, 0x36, 0x38, 0x44, 0x2, 0x36, 0x39, 0x45, 0x2, 0x37, 0x30, 0x46, 0x2, 0x37, 0x31, 0x47, 0x2, 0x37, 0x32, 0x48, 0x2, 0x37, 0x33, 0x49, 0x2, 0x37, 0x34, 0x4a, 0x2, 0x37, 0x35, 0x4b, 0x2, 0x37, 0x36, 0x4c, 0x2, 0x37, 0x37, 0x4d, 0x2, 0x37, 0x38, 0x4e, 0x2, 0x37, 0x39, 0x4f, 0x2, 0x38, 0x30, 0x50, 0x2, 0x38, 0x31, 0x51, 0x2, 0x38, 0x32, 0x52, 0x2, 0x38, 0x33, 0x53, 0x2, 0x38, 0x34, 0x54, 0x2, 0x38, 0x35, 0x55, 0x2, 0x38, 0x36, 0x56, 0x2, 0x38, 0x37, 0x57, 0x2, 0x38, 0x38, 0x58, 0x2, 0x38, 0x39, 0x59, 0x2, 0x39, 0x30, 0x5a, 0x2, 0x39, 0x31, 0x5b, 0x2, 0x39, 0x32, 0x5c, 0x2, 0x39, 0x33, 0x5d, 0x2, 0x39, 0x34, 0x5e, 0x2, 0x39, 0x35, 0x5f, 0x2, 0x39, 0x36, 0x60, 0x2, 0x39, 0x37, 0x61, 0x2, 0x39, 0x38, 0x62, 0x2, 0x39, 0x39, 0x63} delmask=[]bool{true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false} 
+[36mINFO[0m[0003] &rbtree.Tree{Root:(*rbtree.Node)(0xc000308840), count:90, Comparator:(rbtree.Comparator)(0x5e94e0), ComparatorWithKey:(rbtree.Comparator)(0x5e95c0), ReplaceAction:(rbtree.ReplaceAction)(nil)} 
+[36mINFO[0m[0003] corrupted tree decoding: err=found more entries in node then expected 
+Test io root :  test-folder-jPIz8uVpRYE5+YOq
+Test io root :  test-folder-IDpOjj/7J3eXk6Kd
+[36mINFO[0m[0003] Bloom filter enabled                         
+Test io root :  test-folder-iKdirnLDog9efLKR
+Test io root :  test-folder-3buQ6bZCEwkhcmUj
+Test io root :  test-folder-VTf/fl4xfLKz7nSz
+[36mINFO[0m[0005] Bloom filter enabled                         
+Test io root :  test-folder-kbEOuxpmAFRbxfkX
+Test io root :  test-folder-Ju+993IOIcURpjXK
+Test io root :  test-folder-vuo2ca5yWTAOR6ZD
+goos: linux
+goarch: amd64
+pkg: github.com/neganovalexey/search/lsm
+BenchmarkBloomInsertAndExists/Insert16-8  	 8318494	       162 ns/op	  99.02 MB/s	   1000000 expected_items	   1125000 filter_bytes	      80 B/op	       2 allocs/op
+BenchmarkBloomInsertAndExists/Exists16-8  	 8194821	       157 ns/op	 101.93 MB/s	      80 B/op	       2 allocs/op
+BenchmarkBloomInsertAndExists/Insert64-8  	 6283718	       210 ns/op	 304.44 MB/s	   1000000 expected_items	   1125000 filter_bytes	     128 B/op	       2 allocs/op
+BenchmarkBloomInsertAndExists/Exists64-8  	 6039393	       181 ns/op	 353.65 MB/s	     128 B/op	       2 allocs/op
+BenchmarkBloomInsertAndExists/Insert128-8 	 4544780	       243 ns/op	 525.90 MB/s	   1000000 expected_items	   1125000 filter_bytes	     192 B/op	       2 allocs/op
+BenchmarkBloomInsertAndExists/Exists128-8 	 5891080	       266 ns/op	 480.31 MB/s	     192 B/op	       2 allocs/op
+BenchmarkBloomInsertAndExists/Insert512-8 	 2094846	       540 ns/op	 948.82 MB/s	   1000000 expected_items	   1125000 filter_bytes	     608 B/op	       2 allocs/op
+BenchmarkBloomInsertAndExists/Exists512-8 	 2475939	       497 ns/op	1029.83 MB/s	     608 B/op	       2 allocs/op
+BenchmarkBloomInsertAndExists/Insert1024-8         	 1631168	       730 ns/op	1402.93 MB/s	   1000000 expected_items	   1125000 filter_bytes	    1184 B/op	       2 allocs/op
+BenchmarkBloomInsertAndExists/Exists1024-8         	 1728477	       614 ns/op	1668.84 MB/s	    1184 B/op	       2 allocs/op
+BenchmarkBloomInsertAndExists/Insert2048-8         	 1000000	      1023 ns/op	2001.14 MB/s	   1000000 expected_items	   1125000 filter_bytes	    2336 B/op	       2 allocs/op
+BenchmarkBloomInsertAndExists/Exists2048-8         	 1247701	       951 ns/op	2154.19 MB/s	    2336 B/op	       2 allocs/op
+BenchmarkBloomInsertAndExists/Insert4096-8         	  700137	      1751 ns/op	2339.09 MB/s	   1000000 expected_items	   1125000 filter_bytes	    4896 B/op	       2 allocs/op
+BenchmarkBloomInsertAndExists/Exists4096-8         	  686349	      1856 ns/op	2207.36 MB/s	    4896 B/op	       2 allocs/op
+BenchmarkBloomInsertAndExists/Insert8092-8         	  398216	      3163 ns/op	2558.48 MB/s	   1000000 expected_items	   1125000 filter_bytes	    8224 B/op	       2 allocs/op
+BenchmarkBloomInsertAndExists/Exists8092-8         	  383943	      3722 ns/op	2173.90 MB/s	    8224 B/op	       2 allocs/op
+BenchmarkBloomInsertAndExists/Insert16384-8        	  201480	      5950 ns/op	2753.73 MB/s	   1000000 expected_items	   1125000 filter_bytes	   18464 B/op	       2 allocs/op
+BenchmarkBloomInsertAndExists/Exists16384-8        	  204742	      5907 ns/op	2773.80 MB/s	   18464 B/op	       2 allocs/op
+Test io root :  test-folder-1p6hc1cylIoMVd1O
+BenchmarkLsm_InsertRandomKeysOrder/WithoutSizeAmplificationCheck/100000_entries-8         	1000000000	         0.301 ns/op
+BenchmarkLsm_InsertRandomKeysOrder/WithoutSizeAmplificationCheck/300000_entries-8         	       1	1101812036 ns/op
+BenchmarkLsm_InsertRandomKeysOrder/WithoutSizeAmplificationCheck/500000_entries-8         	       1	2812885045 ns/op
+BenchmarkLsm_InsertRandomKeysOrder/WithoutSizeAmplificationCheck/700000_entries-8         	       1	5233927131 ns/op
+BenchmarkLsm_InsertRandomKeysOrder/WithoutSizeAmplificationCheck/900000_entries-8         	       1	5568427275 ns/op
+BenchmarkLsm_InsertRandomKeysOrder/WithoutSizeAmplificationCheck/1100000_entries-8        	       1	6047779415 ns/op
+BenchmarkLsm_InsertRandomKeysOrder/WithoutSizeAmplificationCheck/1300000_entries-8        	       1	8953163522 ns/op
+BenchmarkLsm_InsertRandomKeysOrder/WithoutSizeAmplificationCheck/1500000_entries-8        	       1	14584675045 ns/op
+BenchmarkLsm_InsertRandomKeysOrder/WithoutSizeAmplificationCheck/2000000_entries-8        	       1	14248517820 ns/op
+BenchmarkLsm_InsertRandomKeysOrder/WithSizeAmplificationCheck/100000_entries-8            	1000000000	         0.295 ns/op
+BenchmarkLsm_InsertRandomKeysOrder/WithSizeAmplificationCheck/300000_entries-8            	       1	1306929898 ns/op
+BenchmarkLsm_InsertRandomKeysOrder/WithSizeAmplificationCheck/500000_entries-8            	       1	2267346722 ns/op
+BenchmarkLsm_InsertRandomKeysOrder/WithSizeAmplificationCheck/700000_entries-8            	       1	4765455635 ns/op
+BenchmarkLsm_InsertRandomKeysOrder/WithSizeAmplificationCheck/900000_entries-8            	       1	5494071547 ns/op
+BenchmarkLsm_InsertRandomKeysOrder/WithSizeAmplificationCheck/1100000_entries-8           	       1	11528846854 ns/op
+BenchmarkLsm_InsertRandomKeysOrder/WithSizeAmplificationCheck/1300000_entries-8           	       1	11612309131 ns/op
+BenchmarkLsm_InsertRandomKeysOrder/WithSizeAmplificationCheck/1500000_entries-8           	       1	11830370728 ns/op
+BenchmarkLsm_InsertRandomKeysOrder/WithSizeAmplificationCheck/2000000_entries-8           	       1	15179629909 ns/op
+Test io root :  test-folder-N8g0x2xsPdtn2BwK
+BenchmarkLsm_InsertAscendingKeysOrder/WithoutSizeAmplificationCheck/100000_entries-8      	1000000000	         0.377 ns/op
+BenchmarkLsm_InsertAscendingKeysOrder/WithoutSizeAmplificationCheck/300000_entries-8      	       1	1366691007 ns/op
+BenchmarkLsm_InsertAscendingKeysOrder/WithoutSizeAmplificationCheck/500000_entries-8      	       1	2724740789 ns/op
+BenchmarkLsm_InsertAscendingKeysOrder/WithoutSizeAmplificationCheck/700000_entries-8      	       1	3724423110 ns/op
+BenchmarkLsm_InsertAscendingKeysOrder/WithoutSizeAmplificationCheck/900000_entries-8      	       1	5197356036 ns/op
+BenchmarkLsm_InsertAscendingKeysOrder/WithoutSizeAmplificationCheck/1100000_entries-8     	       1	6513037723 ns/op
+BenchmarkLsm_InsertAscendingKeysOrder/WithoutSizeAmplificationCheck/1300000_entries-8     	       1	7442486245 ns/op
+BenchmarkLsm_InsertAscendingKeysOrder/WithoutSizeAmplificationCheck/1500000_entries-8     	       1	8309085175 ns/op
+BenchmarkLsm_InsertAscendingKeysOrder/WithoutSizeAmplificationCheck/2000000_entries-8     	       1	13015808561 ns/op
+BenchmarkLsm_InsertAscendingKeysOrder/WithSizeAmplificationCheck/100000_entries-8         	139041496	        11.2 ns/op
+BenchmarkLsm_InsertAscendingKeysOrder/WithSizeAmplificationCheck/300000_entries-8         	       1	1571775582 ns/op
+BenchmarkLsm_InsertAscendingKeysOrder/WithSizeAmplificationCheck/500000_entries-8         	       1	3215955336 ns/op
+BenchmarkLsm_InsertAscendingKeysOrder/WithSizeAmplificationCheck/700000_entries-8         	       1	3736898347 ns/op
+BenchmarkLsm_InsertAscendingKeysOrder/WithSizeAmplificationCheck/900000_entries-8         	       1	4947498854 ns/op
+BenchmarkLsm_InsertAscendingKeysOrder/WithSizeAmplificationCheck/1100000_entries-8        	       1	6298069252 ns/op
+BenchmarkLsm_InsertAscendingKeysOrder/WithSizeAmplificationCheck/1300000_entries-8        	       1	7901295850 ns/op
+BenchmarkLsm_InsertAscendingKeysOrder/WithSizeAmplificationCheck/1500000_entries-8        	       1	9443382440 ns/op
+BenchmarkLsm_InsertAscendingKeysOrder/WithSizeAmplificationCheck/2000000_entries-8        	       1	13912987907 ns/op
+Test io root :  test-folder-7CKLu3RRs39HJEOI
+BenchmarkLsm_InsertAndDelete/WithoutSizeAmplificationCheck/50000_entries-8                	1000000000	         0.136 ns/op
+BenchmarkLsm_InsertAndDelete/WithoutSizeAmplificationCheck/100000_entries-8               	1000000000	         0.350 ns/op
+BenchmarkLsm_InsertAndDelete/WithoutSizeAmplificationCheck/200000_entries-8               	      10	 105201001 ns/op
+BenchmarkLsm_InsertAndDelete/WithoutSizeAmplificationCheck/300000_entries-8               	       1	1929885343 ns/op
+BenchmarkLsm_InsertAndDelete/WithoutSizeAmplificationCheck/400000_entries-8               	       1	2082211103 ns/op
+BenchmarkLsm_InsertAndDelete/WithoutSizeAmplificationCheck/500000_entries-8               	       1	2988219257 ns/op
+BenchmarkLsm_InsertAndDelete/WithoutSizeAmplificationCheck/600000_entries-8               	       1	4031327398 ns/op
+BenchmarkLsm_InsertAndDelete/WithoutSizeAmplificationCheck/700000_entries-8               	       1	4468644490 ns/op
+BenchmarkLsm_InsertAndDelete/WithoutSizeAmplificationCheck/900000_entries-8               	       1	5542115107 ns/op
+BenchmarkLsm_InsertAndDelete/WithSizeAmplificationCheck/50000_entries-8                   	1000000000	         0.137 ns/op
+BenchmarkLsm_InsertAndDelete/WithSizeAmplificationCheck/100000_entries-8                  	1000000000	         0.339 ns/op
+BenchmarkLsm_InsertAndDelete/WithSizeAmplificationCheck/200000_entries-8                  	       2	 662117382 ns/op
+BenchmarkLsm_InsertAndDelete/WithSizeAmplificationCheck/300000_entries-8                  	       1	1714997595 ns/op
+BenchmarkLsm_InsertAndDelete/WithSizeAmplificationCheck/400000_entries-8                  	       1	2413272081 ns/op
+BenchmarkLsm_InsertAndDelete/WithSizeAmplificationCheck/500000_entries-8                  	       1	3589494511 ns/op
+BenchmarkLsm_InsertAndDelete/WithSizeAmplificationCheck/600000_entries-8                  	       1	4234682877 ns/op
+BenchmarkLsm_InsertAndDelete/WithSizeAmplificationCheck/700000_entries-8                  	       1	4838268690 ns/op
+BenchmarkLsm_InsertAndDelete/WithSizeAmplificationCheck/900000_entries-8                  	       1	4946122087 ns/op
+Test io root :  test-folder-VmiNjwuKQlte0Nh6
+BenchmarkLsm_Search/WithoutSizeAmplificationCheck/100000_entries-8                        	1000000000	         0.00359 ns/op
+BenchmarkLsm_Search/WithoutSizeAmplificationCheck/300000_entries-8                        	1000000000	         0.00377 ns/op
+BenchmarkLsm_Search/WithoutSizeAmplificationCheck/500000_entries-8                        	1000000000	         0.00671 ns/op
+BenchmarkLsm_Search/WithoutSizeAmplificationCheck/700000_entries-8                        	1000000000	         0.00454 ns/op
+BenchmarkLsm_Search/WithoutSizeAmplificationCheck/900000_entries-8                        	1000000000	         0.00341 ns/op
+BenchmarkLsm_Search/WithoutSizeAmplificationCheck/1100000_entries-8                       	1000000000	         0.0129 ns/op
+BenchmarkLsm_Search/WithoutSizeAmplificationCheck/1300000_entries-8                       	1000000000	         0.00659 ns/op
+BenchmarkLsm_Search/WithoutSizeAmplificationCheck/1500000_entries-8                       	1000000000	         0.00552 ns/op
+BenchmarkLsm_Search/WithoutSizeAmplificationCheck/2000000_entries-8                       	1000000000	         0.00545 ns/op
+BenchmarkLsm_Search/WithSizeAmplificationCheck/100000_entries-8                           	1000000000	         0.00455 ns/op
+BenchmarkLsm_Search/WithSizeAmplificationCheck/300000_entries-8                           	1000000000	         0.00461 ns/op
+BenchmarkLsm_Search/WithSizeAmplificationCheck/500000_entries-8                           	1000000000	         0.00616 ns/op
+BenchmarkLsm_Search/WithSizeAmplificationCheck/700000_entries-8                           	1000000000	         0.000505 ns/op
+BenchmarkLsm_Search/WithSizeAmplificationCheck/900000_entries-8                           	1000000000	         0.00467 ns/op
+BenchmarkLsm_Search/WithSizeAmplificationCheck/1100000_entries-8                          	1000000000	         0.00749 ns/op
+BenchmarkLsm_Search/WithSizeAmplificationCheck/1300000_entries-8                          	1000000000	         0.00360 ns/op
+BenchmarkLsm_Search/WithSizeAmplificationCheck/1500000_entries-8                          	1000000000	         0.00630 ns/op
+BenchmarkLsm_Search/WithSizeAmplificationCheck/2000000_entries-8                          	1000000000	         0.00640 ns/op
+PASS
+ok  	github.com/neganovalexey/search/lsm	541.254s

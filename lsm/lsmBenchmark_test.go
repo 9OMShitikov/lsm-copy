@@ -1,16 +1,42 @@
 package lsm
 
 import (
+	"github.com/neganovalexey/search/testutil"
+	"math/rand"
 	"strconv"
-	"strings"
 	"testing"
 )
 
 // benchmark for insert
 var benchInsertSizes = [] int {100000, 300000, 500000, 700000, 900000, 1100000, 1300000, 1500000, 2000000}
 var benchInsertKeyLen = 100
+
+func runOnSizes (b* testing.B, sizes[]int, sizeAmpCheck bool,
+				 runFunc func(b* testing.B, size int, ampCheck bool)) {
+	for _, size := range sizes {
+		b.Run(strconv.Itoa(size) + "_entries", func(b* testing.B) {
+			runFunc(b, size, sizeAmpCheck)
+		})
+	}
+}
+
+func runOnSizesWithTree (b* testing.B, sizes[]int, sizeAmpCheck bool, stringGenerator func(int, int) string,
+	keyLen int, runFunc func(b* testing.B, size int, tree *Lsm)) {
+	for _, size := range sizes {
+		lsm := createTestLsmWithBloom(true)
+		for i := 0; i < size; i++ {
+			lsm.Insert(&testEntry{data: uint32(i), str: stringGenerator(i, keyLen)})
+		}
+		lsm.cfg.MergeCfg.EnableSizeAmplificationCheck = sizeAmpCheck
+		lsm.WaitMergeDone()
+		b.Run(strconv.Itoa(size) + "_entries", func(b* testing.B) {
+			runFunc(b, size, lsm)
+		})
+	}
+}
+
 func lsmInsertBench(b *testing.B, stringGenerator func(int, int) string,
-	sizes []int, keyLen int, keysOrder string) {
+	sizes []int, keyLen int) {
 	TestModeOff()
 	beforeTest()
 
@@ -25,65 +51,102 @@ func lsmInsertBench(b *testing.B, stringGenerator func(int, int) string,
 		lsm.WaitMergeDone()
 	}
 
-	for _, size := range sizes {
-		b.Run("insert_" + keysOrder + "_" +
-			strconv.Itoa(size) + "_entries_without_size_amplification_check", func(b* testing.B) {
-			benchInsert(b, size, false)
-		})
-	}
+	b.Run("WithoutSizeAmplificationCheck", func(b* testing.B) {
+		runOnSizes(b, sizes, false, benchInsert)
+	})
 
-	for _, size := range sizes {
-		b.Run("insert_"+ keysOrder + "_" +
-			strconv.Itoa(size) + "_entries_with_size_amplification_check", func(b* testing.B) {
-			benchInsert(b, size, true)
-		})
-	}
+
+	b.Run("WithSizeAmplificationCheck", func(b* testing.B) {
+		runOnSizes(b, sizes, true, benchInsert)
+	})
 }
 
-func ascendingStrKey(n int, sz int) string {
-	res := strconv.Itoa(n)
-	if len(res) > sz {
-		panic("too small string size")
-	}
-	return strings.Repeat("0", sz - len(res)) + res
+func BenchmarkLsm_InsertRandomKeysOrder(b *testing.B) {
+	lsmInsertBench(b, testutil.RandomStrKey, benchInsertSizes, benchInsertKeyLen)
 }
 
-func BenchmarkLsmInsertRandomKeys(b *testing.B) {
-	lsmInsertBench(b, randomStrKey, benchInsertSizes, benchInsertKeyLen, "random_keys_order")
+func BenchmarkLsm_InsertAscendingKeysOrder(b *testing.B) {
+	lsmInsertBench(b, testutil.AscendingStrKey, benchInsertSizes, benchInsertKeyLen)
 }
 
-func BenchmarkLsmInsertAscendingKeys(b *testing.B) {
-	lsmInsertBench(b, ascendingStrKey, benchInsertSizes, benchInsertKeyLen, "ascending_keys_order")
-}
+var benchInsertAndDeleteSizes = [] int {50000, 100000, 200000, 300000, 400000, 500000, 600000, 700000, 900000}
+var benchInsertAndDeleteKeyLen = 100
+var benchInsertAndDeleteCycles = 3
 
-func BenchmarkLsmSearch(b *testing.B) {
+func lsmInsertAndDeleteBench(b *testing.B, stringGenerator func(int, int) string,
+	sizes []int, keyLen int, cyclesCount int) {
 	TestModeOff()
 	beforeTest()
 
-	sizes := [] int {100, 200, 300, 500, 700}
-	keyLen := 10000
-	keys := make([]string, sizes[len(sizes) - 1])
-	for i := range keys {
-		keys[i] = randomStrKey(i, keyLen)
+	benchInsertAndDelete := func(b* testing.B, size int, sizeAmpCheck bool) {
+		b.StopTimer()
+		lsm := createTestLsmWithBloom(true)
+		lsm.cfg.MergeCfg.EnableSizeAmplificationCheck = sizeAmpCheck
+		for i := 0; i < size; i++ {
+			lsm.Insert(&testEntry{data: uint32(i), str: stringGenerator(i, keyLen)})
+		}
+		cycleSize := size / cyclesCount
+
+		b.StartTimer()
+		for i := 0; i < cyclesCount; i++ {
+			for j := i * cycleSize; j < (i + 1) * cycleSize; j++ {
+				lsm.Remove(&testEntry{data: uint32(i), str: stringGenerator(i, keyLen)})
+			}
+			for j := i * cycleSize; j < (i + 1) * cycleSize; j++ {
+				lsm.Insert(&testEntry{data: uint32(i), str: stringGenerator(i, keyLen)})
+			}
+		}
+		lsm.WaitMergeDone()
 	}
 
-	for _, size := range sizes {
-		b.Run("search_"+strconv.Itoa(size)+"_entries_without_size_amplification_check", func(b* testing.B) {
-			lsm := createTestLsmWithBloom(true)
-			lsm.cfg.MergeCfg.EnableSizeAmplificationCheck = false
-			b.StopTimer()
-			for i := 0; i < size; i++ {
-				lsm.Insert(&testEntry{data: uint32(i), str: keys[i]})
-			}
-			lsm.WaitMergeDone()
-			b.StartTimer()
-			for i := 0; i < size; i++ {
-				lsm.Search(&testEntryKey {str: keys[i]})
-			}
-			b.StopTimer()
-			lsm.Flush()
-			lsm.WaitMergeDone()
-			b.StartTimer()
-		})
+	b.Run("WithoutSizeAmplificationCheck", func(b* testing.B) {
+		runOnSizes(b, sizes, false, benchInsertAndDelete)
+	})
+
+
+	b.Run("WithSizeAmplificationCheck", func(b* testing.B) {
+		runOnSizes(b, sizes, true, benchInsertAndDelete)
+	})
+}
+
+func BenchmarkLsm_InsertAndDelete(b *testing.B) {
+	lsmInsertAndDeleteBench(b, testutil.RandomStrKey, benchInsertAndDeleteSizes, benchInsertAndDeleteKeyLen,
+		           benchInsertAndDeleteCycles)
+}
+
+var benchSearchTreeSizes = [] int {100000, 300000, 500000, 700000, 900000, 1100000, 1300000, 1500000, 2000000}
+var benchSearchKeyLen = 100
+var benchSearchEntries = 100
+
+func lsmSearchBench(b *testing.B, stringGenerator func(int, int) string,
+	sizes []int, keyLen int) {
+	TestModeOff()
+	beforeTest()
+
+	benchSearch := func(b* testing.B, size int, lsm *Lsm) {
+		b.StopTimer()
+		rand.Seed(42)
+		keys := make([]testEntryKey, benchSearchEntries)
+		for i := 0; i < benchSearchEntries; i++ {
+			t := rand.Intn(size)
+			keys[i] = testEntryKey {str: stringGenerator(t, keyLen)}
+		}
+		b.StartTimer()
+		for i := 0; i < benchSearchEntries; i++ {
+			lsm.Search(&keys[i])
+		}
 	}
+
+	b.Run("WithoutSizeAmplificationCheck", func(b* testing.B) {
+		runOnSizesWithTree(b, sizes, false, stringGenerator, keyLen, benchSearch)
+	})
+
+
+	b.Run("WithSizeAmplificationCheck", func(b* testing.B) {
+		runOnSizesWithTree(b, sizes, true, stringGenerator, keyLen, benchSearch)
+	})
+}
+
+func BenchmarkLsm_Search(b *testing.B) {
+	lsmSearchBench(b, testutil.RandomStrKey, benchSearchTreeSizes, benchSearchKeyLen)
 }

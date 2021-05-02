@@ -16,7 +16,7 @@ import (
 
 const lsmMagic uint32 = 0x52de2340
 const lsmVersion uint32 = 2
-const maxLsmCtrees = 12
+const maxLsmCtrees = 20
 const memLsmCtrees = 2 // first 2 ctrees are in-memory
 
 // Config is configuration for lsm tree
@@ -141,7 +141,7 @@ func New(config Config) *Lsm {
 
 // should be called under lsm.Lock()
 func (lsm *Lsm) addCtree() {
-	//assert(len(lsm.Ctree) < maxLsmCtrees)
+	assert(len(lsm.Ctree) < maxLsmCtrees)
 	lsm.Ctree = append(lsm.Ctree, ctreeNew(lsm, len(lsm.Ctree)))
 	lsm.Generation = lsm.gens.nextLsmGen()
 }
